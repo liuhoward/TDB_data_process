@@ -17,9 +17,12 @@
 #include <string>
 #include <time.h>
 #include <iostream>
+#include <fstream>
 #include <cstdlib>
+#include <algorithm>
 #define ELEMENT_COUNT(arr) (sizeof(arr)/sizeof(arr[0]))
 
+using namespace std;
 
 int Print(const char* szFormat, ...);
 
@@ -35,9 +38,16 @@ int Print(const char* szFormat, ...);
 void GetTick(THANDLE hTdb, const std::string& strCode, bool bWithAB, int nStartDay, int nEndDay, int nStartTime =0, int nEndTime = 0);
 void GetK(THANDLE hTdb, const std::string& strCode, CYCTYPE nCycType,int nCycDef, REFILLFLAG nFlag,  int nAutoComplete, int nStartDay, int nEndDay, int nStartTime=0, int nEndTime = 0);
 
+vector<string> importStockCode(string srcFile);
+
+
 int main(int argc, char* argv[])
 {
 
+    //cout<<"argc: "<<argc<<endl;
+    string codeFile = "..\\..\\data\\zz500.csv";
+    vector<string> stockCodes = importStockCode(codeFile);
+    
     OPEN_SETTINGS settings={"192.168.14.200","10010","sz1b_szqhdy","123123",30,2,0};
     //LoadIPFromCin(settings);
     TDBDefine_ResLogin loginAnswer={0};
@@ -49,35 +59,22 @@ int main(int argc, char* argv[])
         exit(0);
     }
 
-    {
-        TDBDefine_Code* pCode = NULL;
-        int nCount = 0;
-        TDB_GetCodeTable(hTdb, "SH", &pCode, &nCount);
-        for (int i=0; i<nCount&&i<20; i++)
-        {
-           Print("%s %s\n", pCode[i].chCode, pCode[i].chCNName);
-        }
-        
-        delete []pCode;
-    }
+    char* arrCode[] = {"000001.sz"};
+    int arrDays[] = {20170515};
 
-    char* arrCode[] = {"000001.sz" ,"600000.sh"};
-    int arrDays[] = {20170515, 20170516, 20170517};
-
-    for (int i=0; i<sizeof(arrCode)/sizeof(arrCode[0]); i++)
+    vector<string>::iterator chWindCode;
+    for (chWindCode = stockCodes.begin(); chWindCode != stockCodes.end(); chWindCode++)
     {
         for (int j=0; j<sizeof(arrDays)/sizeof(arrDays[j]); j++)
         {
-            char* pCode = arrCode[i];
+            const char *pCode = (*chWindCode).c_str();
             int nDate = arrDays[j];
             GetTick(hTdb, pCode, false, nDate, nDate);
-            GetK(hTdb, pCode, CYC_SECOND, 1, REFILL_NONE, 0, nDate, nDate);
-            GetK(hTdb, pCode, CYC_SECOND, 1, REFILL_NONE, 1, nDate, nDate);
-            GetK(hTdb, pCode, CYC_SECOND, 7, REFILL_NONE, 0, nDate, nDate);
+           
         }
     }
 
-    Print("------------程序自然退出-----------------\n");
+    cout <<"------------finished-----------------"<<endl;
 
     TDB_Close(hTdb);
 
@@ -96,11 +93,11 @@ void GetTick(THANDLE hTdb, const std::string& strCode, bool bWithAB, int nStartD
         int nCount;
         int nRet = TDB_GetTick(hTdb, &reqTick, &pTick, &nCount);
 
-        Print("---------------------收到%d项快照，错误码:%d -----------------\n", nCount,nRet);
+        Print("---------------------receive %d records, error code:%d -----------------\n", nCount, nRet);
         for (int i=0; i<nCount && i<10; i++)
         {
             TDBDefine_Tick& tdbTick = *(pTick+i);
-            
+            Print("code:%s, date:%d, time:%d, nprice:%d, vol:%I64d, turover:%I64d, acc vol:%I64d, acc turover:%I64d\n", tdbTick.chWindCode, tdbTick.nDate, tdbTick.nTime, tdbTick.nPrice, tdbTick.iVolume, tdbTick.iTurover, tdbTick.iAccVolume, tdbTick.iAccTurover);
         }
         delete [] pTick;
     }
@@ -111,7 +108,7 @@ void GetTick(THANDLE hTdb, const std::string& strCode, bool bWithAB, int nStartD
         int nCount;
         int nRet = TDB_GetTickAB(hTdb, &reqTick, &pTick, &nCount);
 
-        Print("---------------------收到%d项快照，错误码:%d -----------------\n", nCount, nRet);
+        Print("---------------------receive %d records, error code:%d -----------------\n", nCount, nRet);
         for (int i=0; i<nCount  && i<10; i++)
         {
             TDBDefine_TickAB& tdbTick = *(pTick+i);
@@ -137,7 +134,7 @@ void GetK(THANDLE hTdb, const std::string& strCode, CYCTYPE nCycType, int nCycDe
     //TICK_BEGIN(minitue);1
     int nRet = TDB_GetKLine(hTdb, &reqK, &pKLine, &nCount);
     //TICK_END(minitue);
-    Print("---------------------收到%d项K线，错误码:%d -----------------\n", nCount, nRet);
+    Print("---------------------receive %d records, error code:%d -----------------\n", nCount, nRet);
     for (int i=0; i<nCount && i<10; i++)
     {
         TDBDefine_KLine& tdbK = *(pKLine+i);
@@ -169,3 +166,30 @@ int Print(const char* szFormat, ...)
     return 0;
 }
 
+std::string& trim(std::string &s) 
+{
+    if (s.empty()) 
+    {
+        return s;
+    }
+    s.erase(0,s.find_first_not_of(" "));
+    s.erase(s.find_last_not_of(" ") + 1);
+    return s;
+}
+
+vector<string> importStockCode(string srcFile)
+{
+    vector<string> stockCodes;
+    string line;
+    ifstream infile(srcFile.c_str());
+    
+    if(infile) {
+        getline(infile, line);
+        while (getline(infile, line)) {
+            string tmp = trim(line);
+            stockCodes.push_back(tmp);
+        }
+    }
+    
+    return stockCodes;
+}
