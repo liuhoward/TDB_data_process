@@ -20,9 +20,14 @@
 #include <fstream>
 #include <cstdlib>
 #include <algorithm>
+#include <hash_set>
+
+#include <boost/date_time.hpp>
+
 #define ELEMENT_COUNT(arr) (sizeof(arr)/sizeof(arr[0]))
 
 using namespace std;
+using namespace boost::gregorian;
 
 int Print(const char* szFormat, ...);
 
@@ -43,6 +48,80 @@ vector<string> importStockCode(string srcFile);
 
 int main(int argc, char* argv[])
 {
+
+    int vacations[] = {
+
+        20160101,
+        20160102,
+        20160103,
+        20160207,
+        20160208,
+        20160209,
+        20160210,
+        20160211,
+        20160212,
+        20160213,
+        20160402,
+        20160403,
+        20160404,
+        20160430,
+        20160501,
+        20160502,
+        20160609,
+        20160610,
+        20160611,
+        20160915,
+        20160916,
+        20160917,
+        20161001,
+        20161002,
+        20161003,
+        20161004,
+        20161005,
+        20161006,
+        20161007,
+
+
+        20170101,
+        20170102,
+        20170127,
+        20170128,
+        20170129,
+        20170130,
+        20170131,
+        20170201,
+        20170202,
+        20170402,
+        20170403,
+        20170404,
+        20170429,
+        20170430,
+        20170501,
+        20170528,
+        20170529,
+        20170530,
+        20171001,
+        20171002,
+        20171003,
+        20171004,
+        20171005,
+        20171006,
+        20171007,
+        20171008,
+    };
+
+    hash_set<int> vacationSet;
+    int size = ELEMENT_COUNT(vacations);
+    for(int i = 0; i < size; i++) {
+        vacationSet.insert(vacations[i]);
+    }
+
+    date begin_dt(2016,1,1);
+    date end_dt(day_clock::local_day());
+    days duration=end_dt-begin_dt;
+
+    cout<<"calendar days between begin & end date are:" << duration << '\n';
+
 
     //cout<<"argc: "<<argc<<endl;
     string codeFile = "..\\..\\data\\zz500.csv";
@@ -65,13 +144,24 @@ int main(int argc, char* argv[])
     vector<string>::iterator chWindCode;
     for (chWindCode = stockCodes.begin(); chWindCode != stockCodes.end(); chWindCode++)
     {
-        for (int j=0; j<sizeof(arrDays)/sizeof(arrDays[j]); j++)
-        {
+        for (day_iterator iter = begin_dt; iter != end_dt; ++iter) {
+
+            if (iter->day_of_week() ==  boost::date_time::Saturday
+                || iter->day_of_week() ==  boost::date_time::Sunday) {
+                continue;
+            }
+
+            int nDate = atoi(to_iso_string(*iter).c_str());
+
+            if (vacationSet.find(nDate) != vacationSet.end()) {
+                continue;
+            }
+
             const char *pCode = (*chWindCode).c_str();
-            int nDate = arrDays[j];
-            GetTick(hTdb, pCode, false, nDate, nDate);
-           
+            GetTick(hTdb, pCode, true, nDate, nDate);
+
         }
+        
     }
 
     cout <<"------------finished-----------------"<<endl;
@@ -80,6 +170,11 @@ int main(int argc, char* argv[])
 
     system("pause");
 
+}
+
+bool a_less_b(const TDBDefine_Tick& a,constTDBDefine_Tick& b)
+{
+    return a.nTime < b.nTime;
 }
 
 void GetTick(THANDLE hTdb, const std::string& strCode, bool bWithAB, int nStartDay, int nEndDay, int nStartTime/* =0*/, int nEndTime/* = 0*/)
