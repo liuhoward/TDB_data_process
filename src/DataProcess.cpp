@@ -172,7 +172,7 @@ int main(int argc, char* argv[])
 
 }
 
-bool a_less_b(const TDBDefine_Tick& a,constTDBDefine_Tick& b)
+bool a_less_b(const TDBDefine_Tick& a,const TDBDefine_Tick& b)
 {
     return a.nTime < b.nTime;
 }
