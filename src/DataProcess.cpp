@@ -43,7 +43,7 @@ int Print(const char* szFormat, ...);
     Print("Topic:%s time-sep:%d\n", #Topic, nAfter##Topic##Tick_ - nBefore##Topic##Tick_);
 
 
-void GetTick(THANDLE hTdb, const std::string& strCode, bool bWithAB, int nStartDay, int nEndDay, int nStartTime =0, int nEndTime = 0);
+int GetTickAB(THANDLE hTdb, const std::string& strCode, int nStartDay, int nEndDay, int nStartTime/* =0*/, int nEndTime/* = 0*/, ofstream& origin_out, ofstream& ofile);
 void GetK(THANDLE hTdb, const std::string& strCode, CYCTYPE nCycType,int nCycDef, REFILLFLAG nFlag,  int nAutoComplete, int nStartDay, int nEndDay, int nStartTime=0, int nEndTime = 0);
 
 vector<string> importStockCode(string srcFile);
@@ -127,7 +127,10 @@ int main(int argc, char* argv[])
 
 
     //cout<<"argc: "<<argc<<endl;
-    string codeFile = "..\\..\\data\\zz500.csv";
+    string dataPath = "..\\..\\data\\";
+    string codeFile = dataPath + "zz500.csv";
+    string stockTickOriginPath = dataPath + "zz500origin\\";
+    string stockTickPath = dataPath + "zz500\\";
     vector<string> stockCodes = importStockCode(codeFile);
     
     OPEN_SETTINGS settings={"192.168.14.200","10010","sz1b_szqhdy","123123",30,2,0};
@@ -147,6 +150,10 @@ int main(int argc, char* argv[])
     vector<string>::iterator chWindCode;
     for (chWindCode = stockCodes.begin(); chWindCode != stockCodes.end(); chWindCode++)
     {
+        string stockTickOriginFile = stockTickOriginPath + *chWindCode + ".csv";
+        string stockTickFile = stockTickPath + *chWindCode + ".csv";
+        ofstream origin_out(stockTickOriginFile, ios::binary);
+        ofstream ofile(stockTickFile, ios::binary);
         for (day_iterator iter = begin_dt; iter != end_dt; ++iter) {
 
             if (iter->day_of_week() ==  boost::date_time::Saturday
@@ -161,9 +168,13 @@ int main(int argc, char* argv[])
             }
 
             const char *pCode = (*chWindCode).c_str();
-            GetTick(hTdb, pCode, true, nDate, nDate);
+            GetTickAB(hTdb, pCode, nDate, nDate, 0, 0, origin_out, ofile);
 
         }
+        origin_out.flush();
+        origin_out.close();
+        ofile.flush();
+        ofile.close();
         
     }
 
@@ -308,7 +319,7 @@ int indexTotime(int index) {
     return nTime;
 }
 
-int GetTickAB(THANDLE hTdb, const std::string& strCode, int nStartDay, int nEndDay, int nStartTime/* =0*/, int nEndTime/* = 0*/, ofstream origin_out, ofstream ofile)
+int GetTickAB(THANDLE hTdb, const std::string& strCode, int nStartDay, int nEndDay, int nStartTime/* =0*/, int nEndTime/* = 0*/, ofstream& origin_out, ofstream& ofile)
 {
     TDBDefine_ReqTick reqTick = {"",nStartDay, nEndDay, nStartTime, nEndTime};
     strncpy(reqTick.chCode, strCode.c_str(), sizeof(reqTick.chCode));
