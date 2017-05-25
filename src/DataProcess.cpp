@@ -334,7 +334,7 @@ int GetTickAB(THANDLE hTdb, const std::string& strCode, int nStartDay, int nEndD
         return -1;
     }
 
-    Print("---------------------receive %d records, error code:%d -----------------\n", nCount, nRet);
+    Print("-- %s ---%d---receive %d records, error code:%d ------\n", strCode.c_str(), nStartDay, nCount, nRet);
 
     if(nCount <= 0) {
         return 0;
