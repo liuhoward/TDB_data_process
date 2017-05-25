@@ -23,12 +23,14 @@
 #include <hash_set>
 
 #include <boost/date_time.hpp>
+#include <boost/date_time/posix_time/posix_time.hpp>
 //#include <boost/format.hpp>
 
 #define ELEMENT_COUNT(arr) (sizeof(arr)/sizeof(arr[0]))
 
 using namespace std;
 using namespace boost::gregorian;
+using namespace boost::posix_time;
 
 int Print(const char* szFormat, ...);
 
@@ -225,6 +227,54 @@ string formatTickAB(TDBDefine_TickAB& tdbTick)
     return ss.str();
 }
 
+string formatTickABreset(TDBDefine_TickAB& tdbTick, int time)
+{
+    stringstream ss;
+    ss << tdbTick.chWindCode << ","
+        << tdbTick.nDate << ","
+        << time << ","
+        << tdbTick.nPrice << ","
+        << 0 << ","
+        << 0 << ","
+        << 0 << ","
+        << tdbTick.nInterest << ","
+        << tdbTick.chTradeFlag << ","
+        << tdbTick.chBSFlag << ","
+        << tdbTick.iAccVolume << ","
+        << tdbTick.iAccTurover << ","
+        << tdbTick.nHigh << ","
+        << tdbTick.nLow << ","
+        << tdbTick.nOpen << ","
+        << tdbTick.nPreClose << ",";
+
+    int size = ELEMENT_COUNT(tdbTick.nAskPrice);
+    for(int i = 0; i < size; i++) {
+        ss << tdbTick.nAskPrice[i] << ",";
+    }
+    for(int i = 0; i < size; i++) {
+        ss << tdbTick.nBidPrice[i] << ",";
+    }
+    for(int i = 0; i < size; i++) {
+        ss << tdbTick.nAskVolume[i] << ",";
+    }
+    for(int i = 0; i < size; i++) {
+        ss << tdbTick.nBidVolume[i] << ",";
+    }
+
+    ss << tdbTick.nAskAvPrice << ","
+        << tdbTick.nBidAvPrice << ""
+        << tdbTick.iTotalAskVolume << ","
+        << tdbTick.iTotalBidVolume << ","
+        << tdbTick.nIndex << ","
+        << tdbTick.nStocks << ","
+        << tdbTick.nUps << ","
+        << tdbTick.nDowns << ","
+        << tdbTick.nHoldLines << "\n";
+
+    return ss.str();
+}
+
+
 int timeToindex(int nTime) {
     int index = 0;
     int base = 93001;
@@ -241,6 +291,21 @@ int timeToindex(int nTime) {
     index += tmp % 100 + delta; 
 
     return index;
+}
+
+int indexTotime(int index) {
+    index += 1;
+    int nTime = 93000;
+    if(index > 7200) {
+        nTime = 130000;
+        index = index - 7200;
+    }
+    nTime += index / 3600 * 10000;
+    index %= 3600;
+    nTime += index / 60 * 100;
+    nTime += index % 60;
+
+    return nTime;
 }
 
 int GetTickAB(THANDLE hTdb, const std::string& strCode, int nStartDay, int nEndDay, int nStartTime/* =0*/, int nEndTime/* = 0*/, ofstream origin_out, ofstream ofile)
@@ -295,7 +360,7 @@ int GetTickAB(THANDLE hTdb, const std::string& strCode, int nStartDay, int nEndD
     }
     
     // total number of indice
-    int total = 60 * 60 * 4 - 2;
+    int total = 60 * 60 * 4;
     // only one valid tick
     if(next == origin_data.end()) {
         nextIndex = total;
@@ -306,12 +371,21 @@ int GetTickAB(THANDLE hTdb, const std::string& strCode, int nStartDay, int nEndD
 
     int index = 0;
     while(true) {
-        while(index < nextIndex) {
-            string record = formatTickAB(*curr);
+        // if data is missing
+        int upBoundary = currIndex + 30;
+        // start to complete ticks
+        while(index < nextIndex && index < upBoundary) {
+            string record;
+            if(index == currIndex) {
+                record = formatTickAB(*curr);
+            }
+            else {
+                record = formatTickABreset(*curr, indexTotime(index));
+            }
             ofile.write(record.c_str(), sizeof(record.c_str()));
             index++;
         }
-        if(nextIndex == total) {
+        if(index == upBoundary || nextIndex == total) {
             break;
         }
         currIndex = nextIndex;
@@ -330,6 +404,7 @@ int GetTickAB(THANDLE hTdb, const std::string& strCode, int nStartDay, int nEndD
     }
 
     delete[] pTick;
+    vector<TDBDefine_TickAB>().swap(origin_data);
 
     return 0;
     
