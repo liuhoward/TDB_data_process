@@ -191,9 +191,9 @@ bool a_less_b(const TDBDefine_TickAB& a, const TDBDefine_TickAB& b)
     return a.nTime < b.nTime;
 }
 
-string formatTickAB(TDBDefine_TickAB& tdbTick)
+void formatTickAB(TDBDefine_TickAB& tdbTick, ofstream& ss)
 {
-    stringstream ss;
+    //stringstream ss;
     ss << tdbTick.chWindCode << ","
         << tdbTick.nDate << ","
         << tdbTick.nTime << ","
@@ -202,7 +202,7 @@ string formatTickAB(TDBDefine_TickAB& tdbTick)
         << tdbTick.iTurover << ","
         << tdbTick.nMatchItems << ","
         << tdbTick.nInterest << ","
-        << tdbTick.chTradeFlag << ","
+        << (int)tdbTick.chTradeFlag << ","
         << tdbTick.chBSFlag << ","
         << tdbTick.iAccVolume << ","
         << tdbTick.iAccTurover << ","
@@ -235,12 +235,11 @@ string formatTickAB(TDBDefine_TickAB& tdbTick)
         << tdbTick.nDowns << ","
         << tdbTick.nHoldLines << "\n";
 
-    return ss.str();
 }
 
-string formatTickABreset(TDBDefine_TickAB& tdbTick, int time)
+void formatTickABreset(TDBDefine_TickAB& tdbTick, int time, ofstream& ss)
 {
-    stringstream ss;
+    //stringstream ss;
     ss << tdbTick.chWindCode << ","
         << tdbTick.nDate << ","
         << time << ","
@@ -249,7 +248,7 @@ string formatTickABreset(TDBDefine_TickAB& tdbTick, int time)
         << 0 << ","
         << 0 << ","
         << tdbTick.nInterest << ","
-        << tdbTick.chTradeFlag << ","
+        << (int)tdbTick.chTradeFlag << ","
         << tdbTick.chBSFlag << ","
         << tdbTick.iAccVolume << ","
         << tdbTick.iAccTurover << ","
@@ -282,7 +281,6 @@ string formatTickABreset(TDBDefine_TickAB& tdbTick, int time)
         << tdbTick.nDowns << ","
         << tdbTick.nHoldLines << "\n";
 
-    return ss.str();
 }
 
 
@@ -316,7 +314,7 @@ int indexTotime(int index) {
     nTime += index / 60 * 100;
     nTime += index % 60;
 
-    return nTime;
+    return nTime * 1000;
 }
 
 int GetTickAB(THANDLE hTdb, const std::string& strCode, int nStartDay, int nEndDay, int nStartTime/* =0*/, int nEndTime/* = 0*/, ofstream& origin_out, ofstream& ofile)
@@ -346,8 +344,7 @@ int GetTickAB(THANDLE hTdb, const std::string& strCode, int nStartDay, int nEndD
     for (int i = 0; i < nCount; i++) {
         TDBDefine_TickAB &tdbTick = *(pTick + i);
 
-        string record = formatTickAB(tdbTick);
-        origin_out.write(record.c_str(), sizeof(record.c_str()));
+        formatTickAB(tdbTick, origin_out);
 
         // filter ticks with wrong date or wrong price or wrong time
         tdbTick.nTime = tdbTick.nTime / 1000 * 1000;
@@ -386,14 +383,14 @@ int GetTickAB(THANDLE hTdb, const std::string& strCode, int nStartDay, int nEndD
         int upBoundary = currIndex + 30;
         // start to complete ticks
         while(index < nextIndex && index < upBoundary) {
-            string record;
+            
             if(index == currIndex) {
-                record = formatTickAB(*curr);
+                formatTickAB(*curr, ofile);
             }
             else {
-                record = formatTickABreset(*curr, indexTotime(index));
+                formatTickABreset(*curr, indexTotime(index), ofile);
             }
-            ofile.write(record.c_str(), sizeof(record.c_str()));
+            
             index++;
         }
         if(index == upBoundary || nextIndex == total) {
