@@ -379,10 +379,8 @@ int GetTickAB(THANDLE hTdb, const std::string& strCode, int nStartDay, int nEndD
 
     int index = 0;
     while(true) {
-        // if data is missing
-        int upBoundary = currIndex + 30;
         // start to complete ticks
-        while(index < nextIndex && index < upBoundary) {
+        while(index < nextIndex) {
             
             if(index == currIndex) {
                 formatTickAB(*curr, ofile);
@@ -393,7 +391,7 @@ int GetTickAB(THANDLE hTdb, const std::string& strCode, int nStartDay, int nEndD
             
             index++;
         }
-        if(index == upBoundary || nextIndex == total) {
+        if(nextIndex == total) {
             break;
         }
         currIndex = nextIndex;
