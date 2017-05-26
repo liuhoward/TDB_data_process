@@ -354,6 +354,10 @@ int GetTickAB(THANDLE hTdb, const std::string& strCode, int nStartDay, int nEndD
         origin_data.push_back(tdbTick);
     }
 
+    if(origin_data.size() == 0) {
+        return 0;
+    }
+
     // sort the ticks
     sort(origin_data.begin(), origin_data.end(), a_less_b);
 
