@@ -144,8 +144,8 @@ int main(int argc, char* argv[])
         exit(0);
     }
 
-    char* arrCode[] = {"000001.sz"};
-    int arrDays[] = {20170515};
+    //char* arrCode[] = {"000001.sz"};
+    //int arrDays[] = {20170515};
 
     vector<string>::iterator chWindCode;
     for (chWindCode = stockCodes.begin(); chWindCode != stockCodes.end(); chWindCode++)
@@ -233,7 +233,7 @@ void formatTickAB(TDBDefine_TickAB& tdbTick, ofstream& ss)
         << tdbTick.nStocks << ","
         << tdbTick.nUps << ","
         << tdbTick.nDowns << ","
-        << tdbTick.nHoldLines << "\n";
+        << tdbTick.nHoldLines << endl;
 
 }
 
@@ -279,7 +279,7 @@ void formatTickABreset(TDBDefine_TickAB& tdbTick, int time, ofstream& ss)
         << tdbTick.nStocks << ","
         << tdbTick.nUps << ","
         << tdbTick.nDowns << ","
-        << tdbTick.nHoldLines << "\n";
+        << tdbTick.nHoldLines << endl;
 
 }
 
