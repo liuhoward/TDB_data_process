@@ -322,7 +322,11 @@ int GetTickAB(THANDLE hTdb, const std::string& strCode, string nDate, int nStart
 
     Print("-- %s ---%d---receive %d records, error code:%d ------\n", strCode.c_str(), nStartDay, nCount, nRet);
 
+    TDBDefine_TickAB emptyTickAB;
+    strncpy(emptyTickAB.chWindCode, strCode.c_str(), sizeof(emptyTickAB.chWindCode));
+    emptyTickAB.nDate = nStartDay;
     if(nCount <= 0) {
+        formatTickAB(emptyTickAB, ofile);
         return 0;
     }
 
@@ -347,6 +351,7 @@ int GetTickAB(THANDLE hTdb, const std::string& strCode, string nDate, int nStart
     }
 
     if(origin_data.size() == 0) {
+        formatTickAB(emptyTickAB, ofile);
         return 0;
     }
 
@@ -358,6 +363,7 @@ int GetTickAB(THANDLE hTdb, const std::string& strCode, string nDate, int nStart
         ++curr;
     }
     if(curr == origin_data.end()) {
+        formatTickAB(emptyTickAB, ofile);
         return 0;
     }
 
