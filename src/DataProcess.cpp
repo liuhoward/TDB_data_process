@@ -120,7 +120,8 @@ int main(int argc, char* argv[])
     }
 
     date begin_dt(2016,1,1);
-    date end_dt(day_clock::local_day());
+    //date end_dt(day_clock::local_day());
+    date end_dt(2017,5,27);
     days duration=end_dt-begin_dt;
 
     cout<<"calendar days between begin & end date are:" << duration << '\n';
@@ -147,9 +148,22 @@ int main(int argc, char* argv[])
     //char* arrCode[] = {"000001.sz"};
     //int arrDays[] = {20170515};
 
+    string lastCode = "002416.SZ";
+    bool newStart = false;
     vector<string>::iterator chWindCode;
     for (chWindCode = stockCodes.begin(); chWindCode != stockCodes.end(); chWindCode++)
     {
+        /*
+        if (lastCode.compare(*chWindCode) == 0) {
+            newStart = true;
+            continue;
+        }
+
+        if(!newStart) {
+            continue;
+        }
+        */
+
         string stockTickOriginFile = stockTickOriginPath + *chWindCode + ".csv";
         string stockTickFile = stockTickPath + *chWindCode + ".csv";
         ofstream origin_out(stockTickOriginFile, ios::binary);
@@ -191,9 +205,9 @@ bool a_less_b(const TDBDefine_TickAB& a, const TDBDefine_TickAB& b)
     return a.nTime < b.nTime;
 }
 
-void formatTickAB(TDBDefine_TickAB& tdbTick, ofstream& ss)
+void formatTickAB(TDBDefine_TickAB& tdbTick, ofstream& ofout)
 {
-    //stringstream ss;
+    stringstream ss;
     ss << tdbTick.chWindCode << ","
         << tdbTick.nDate << ","
         << tdbTick.nTime << ","
@@ -233,20 +247,19 @@ void formatTickAB(TDBDefine_TickAB& tdbTick, ofstream& ss)
         << tdbTick.nStocks << ","
         << tdbTick.nUps << ","
         << tdbTick.nDowns << ","
-        << tdbTick.nHoldLines << endl;
+        << tdbTick.nHoldLines << "\n";
 
+    ofout << ss.str();
 }
 
-void formatTickABreset(TDBDefine_TickAB& tdbTick, int time, ofstream& ss)
+void formatTickABreset(TDBDefine_TickAB& tdbTick, int time, ofstream& ofout)
 {
-    //stringstream ss;
+    stringstream ss;
     ss << tdbTick.chWindCode << ","
         << tdbTick.nDate << ","
         << time << ","
         << tdbTick.nPrice << ","
-        << 0 << ","
-        << 0 << ","
-        << 0 << ","
+        << "0,0,0,"
         << tdbTick.nInterest << ","
         << (int)tdbTick.chTradeFlag << ","
         << tdbTick.chBSFlag << ","
@@ -279,7 +292,10 @@ void formatTickABreset(TDBDefine_TickAB& tdbTick, int time, ofstream& ss)
         << tdbTick.nStocks << ","
         << tdbTick.nUps << ","
         << tdbTick.nDowns << ","
-        << tdbTick.nHoldLines << endl;
+        << tdbTick.nHoldLines << "\n";
+
+
+    ofout << ss.str();
 
 }
 
