@@ -398,8 +398,10 @@ int GetTickAB(THANDLE hTdb, const std::string& strCode, string nDate, int nStart
 
     }
 
-
-    curr = next;
+    // fix bug, 涨跌停导致下午没数据
+    if(next < origin_data.end()){
+        curr = next;
+    }
     currTime = ptime(today) + hours(curr->nTime / 10000000) + minutes((curr->nTime % 10000000) / 100000) + seconds(((curr->nTime % 10000000) % 100000) / 1000);
     // remove duplicates with the same HHMMSS
     while (next != origin_data.end() && next->nTime == curr->nTime) {
