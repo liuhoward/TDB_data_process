@@ -43,7 +43,7 @@ int Print(const char* szFormat, ...);
     Print("Topic:%s time-sep:%d\n", #Topic, nAfter##Topic##Tick_ - nBefore##Topic##Tick_);
 
 
-int GetTickAB(THANDLE hTdb, const std::string& strCode, int nStartDay, int nEndDay, int nStartTime/* =0*/, int nEndTime/* = 0*/, ofstream& origin_out, ofstream& ofile);
+int GetTickAB(THANDLE hTdb, const std::string& strCode, string nDate, int nStartTime/* =0*/, int nEndTime/* = 0*/, ofstream& origin_out, ofstream& ofile);
 void GetK(THANDLE hTdb, const std::string& strCode, CYCTYPE nCycType,int nCycDef, REFILLFLAG nFlag,  int nAutoComplete, int nStartDay, int nEndDay, int nStartTime=0, int nEndTime = 0);
 
 vector<string> importStockCode(string srcFile);
@@ -175,14 +175,15 @@ int main(int argc, char* argv[])
                 continue;
             }
 
-            int nDate = atoi(to_iso_string(*iter).c_str());
+            string currDate = to_iso_string(*iter);
+            int nDate = atoi(currDate.c_str());
 
             if (vacationSet.find(nDate) != vacationSet.end()) {
                 continue;
             }
 
             const char *pCode = (*chWindCode).c_str();
-            GetTickAB(hTdb, pCode, nDate, nDate, 0, 0, origin_out, ofile);
+            GetTickAB(hTdb, pCode, currDate, 0, 0, origin_out, ofile);
 
         }
         origin_out.flush();
@@ -252,12 +253,13 @@ void formatTickAB(TDBDefine_TickAB& tdbTick, ofstream& ofout)
     ofout << ss.str();
 }
 
-void formatTickABreset(TDBDefine_TickAB& tdbTick, int time, ofstream& ofout)
+void formatTickABreset(TDBDefine_TickAB& tdbTick, string time, ofstream& ofout)
 {
     stringstream ss;
     ss << tdbTick.chWindCode << ","
         << tdbTick.nDate << ","
-        << time << ","
+        << atoi(time.substr(9, 15).c_str())
+        << "000" << ","
         << tdbTick.nPrice << ","
         << "0,0,0,"
         << tdbTick.nInterest << ","
@@ -299,42 +301,10 @@ void formatTickABreset(TDBDefine_TickAB& tdbTick, int time, ofstream& ofout)
 
 }
 
-
-int timeToindex(int nTime) {
-    int index = 0;
-    int base = 93001;
-    int delta = 0;
-    if(nTime > 130000000) {
-        base = 130001;
-        delta = 7200;
-    }
-
-    int tmp = (nTime / 1000 - base);
-    index += tmp / 10000 * 3600;
-    tmp %= 10000;
-    index += tmp / 100 * 60;
-    index += tmp % 100 + delta; 
-
-    return index;
-}
-
-int indexTotime(int index) {
-    index += 1;
-    int nTime = 93000;
-    if(index > 7200) {
-        nTime = 130000;
-        index = index - 7200;
-    }
-    nTime += index / 3600 * 10000;
-    index %= 3600;
-    nTime += index / 60 * 100;
-    nTime += index % 60;
-
-    return nTime * 1000;
-}
-
-int GetTickAB(THANDLE hTdb, const std::string& strCode, int nStartDay, int nEndDay, int nStartTime/* =0*/, int nEndTime/* = 0*/, ofstream& origin_out, ofstream& ofile)
+int GetTickAB(THANDLE hTdb, const std::string& strCode, string nDate, int nStartTime/* =0*/, int nEndTime/* = 0*/, ofstream& origin_out, ofstream& ofile)
 {
+    int nStartDay = atoi(nDate.c_str());
+    int nEndDay = nStartDay;
     TDBDefine_ReqTick reqTick = {"",nStartDay, nEndDay, nStartTime, nEndTime};
     strncpy(reqTick.chCode, strCode.c_str(), sizeof(reqTick.chCode));
 
@@ -355,6 +325,12 @@ int GetTickAB(THANDLE hTdb, const std::string& strCode, int nStartDay, int nEndD
     if(nCount <= 0) {
         return 0;
     }
+
+    date today = from_undelimited_string(nDate);
+    ptime am_start(today, hours(9) + minutes(30) + seconds(1));
+    ptime am_end = ptime(am_start + hours(2));
+    ptime pm_start(today, hours(13) + seconds(1));
+    ptime pm_end = ptime(pm_start + hours(2));
 
     vector<TDBDefine_TickAB> origin_data(nCount);
     for (int i = 0; i < nCount; i++) {
@@ -379,54 +355,87 @@ int GetTickAB(THANDLE hTdb, const std::string& strCode, int nStartDay, int nEndD
 
     vector<TDBDefine_TickAB>::iterator curr = origin_data.begin();
     vector<TDBDefine_TickAB>::iterator next = origin_data.begin();
-    int currIndex = timeToindex(curr->nTime);
-    int nextIndex;
+
+    ptime currTime = ptime(today) + hours(curr->nTime / 10000000) + minutes((curr->nTime % 10000000) / 100000) + seconds(((curr->nTime % 10000000) % 100000) / 1000);
+    ptime nextTime;
 
     // remove duplicates with the same HHMMSS
     while(next != origin_data.end() && next->nTime == curr->nTime) {
         next++;
     }
     
-    // total number of indice
-    int total = 60 * 60 * 4;
     // only one valid tick
     if(next == origin_data.end()) {
-        nextIndex = total;
+        nextTime = am_end;
     }
     else {
-        nextIndex = timeToindex(next->nTime);
+        nextTime = ptime(today) + hours(next->nTime / 10000000) + minutes((next->nTime % 10000000) / 100000) + seconds((next->nTime % 100000) / 1000);
     }
 
-    int index = 0;
-    while(true) {
-        // start to complete ticks
-        while(index < nextIndex) {
-            
-            if(index == currIndex) {
-                formatTickAB(*curr, ofile);
+    for(time_iterator iter(am_start, seconds(1)); iter < am_end; ++iter) {
+
+        if (iter >= nextTime) {
+
+            currTime = nextTime;
+            curr = next;
+            // remove duplicates with the same HHMMSS
+            while (next != origin_data.end() && next->nTime == curr->nTime) {
+                next++;
             }
-            else {
-                formatTickABreset(*curr, indexTotime(index), ofile);
+
+            if (next->nTime > 113000000 || next == origin_data.end()) {
+                nextTime = am_end;
+            } else {
+                nextTime = ptime(today) + hours(next->nTime / 10000000) + minutes((next->nTime % 10000000) / 100000) + seconds((next->nTime % 100000) / 1000);
             }
-            
-            index++;
-        }
-        if(nextIndex == total) {
-            break;
-        }
-        currIndex = nextIndex;
-        curr = next;
-        // remove duplicates with the same HHMMSS
-        while (next != origin_data.end() && next->nTime == curr->nTime) {
-            next++;
         }
 
-        if (next == origin_data.end()) {
-            nextIndex = total;
+        if (iter == currTime) {
+            formatTickAB(*curr, ofile);
         } else {
-            nextIndex = timeToindex(next->nTime);
+            formatTickABreset(*curr, to_iso_string(*iter), ofile);
         }
-   
+
+    }
+
+
+    curr = next;
+    currTime = ptime(today) + hours(curr->nTime / 10000000) + minutes((curr->nTime % 10000000) / 100000) + seconds(((curr->nTime % 10000000) % 100000) / 1000);
+    // remove duplicates with the same HHMMSS
+    while (next != origin_data.end() && next->nTime == curr->nTime) {
+        next++;
+    }
+
+    if (next == origin_data.end()) {
+        nextTime = pm_end;
+    } else {
+        nextTime = ptime(today) + hours(next->nTime / 10000000) + minutes((next->nTime % 10000000) / 100000) + seconds((next->nTime % 100000) / 1000);
+    }
+
+    for(time_iterator iter(pm_start, seconds(1)); iter < pm_end; ++iter) {
+
+        if (iter >= nextTime) {
+
+            currTime = nextTime;
+            curr = next;
+            // remove duplicates with the same HHMMSS
+            while (next != origin_data.end() && next->nTime == curr->nTime) {
+                next++;
+            }
+
+            if (next == origin_data.end()) {
+                nextTime = pm_end;
+            } else {
+                nextTime = ptime(today) + hours(next->nTime / 10000000) + minutes((next->nTime % 10000000) / 100000) + seconds((next->nTime % 100000) / 1000);
+            }
+        }
+
+        if (iter == currTime) {
+            formatTickAB(*curr, ofile);
+        } else {
+            formatTickABreset(*curr, to_iso_string(*iter), ofile);
+        }
+
     }
 
     delete[] pTick;
