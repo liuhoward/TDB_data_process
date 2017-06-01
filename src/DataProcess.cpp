@@ -340,7 +340,7 @@ int GetTickAB(THANDLE hTdb, const std::string& strCode, string nDate, int nStart
 
         // filter ticks with wrong date or wrong price or wrong time
         tdbTick.nTime = tdbTick.nTime / 1000 * 1000;
-        if(tdbTick.chWindCode[0] == '\0' || tdbTick.nDate != nStartDay || tdbTick.nPrice <= 0 || tdbTick.nTime < 93000000 || (113000000 < tdbTick.nTime && tdbTick.nTime < 130000000) || tdbTick.nTime > 150000000) {
+        if(tdbTick.nDate != nStartDay || tdbTick.nPrice <= 0 || tdbTick.nTime < 93000000 || (113000000 < tdbTick.nTime && tdbTick.nTime < 130000000) || tdbTick.nTime > 150000000) {
             continue;
         }
         origin_data.push_back(tdbTick);
@@ -354,8 +354,11 @@ int GetTickAB(THANDLE hTdb, const std::string& strCode, string nDate, int nStart
     sort(origin_data.begin(), origin_data.end(), a_less_b);
 
     vector<TDBDefine_TickAB>::iterator curr = origin_data.begin();
-    while (curr->chWindCode[0] == '\0' || curr->nDate != nStartDay || curr->nPrice <= 0 || curr->nTime < 93000000 || (113000000 < curr->nTime && curr->nTime < 130000000) || curr->nTime > 150000000) {
+    while (curr != origin_data.end() && (curr->nDate != nStartDay || curr->nPrice <= 0 || curr->nTime < 93000000 || (113000000 < curr->nTime && curr->nTime < 130000000) || curr->nTime > 150000000)) {
         ++curr;
+    }
+    if(curr == origin_data.end()) {
+        return 0;
     }
 
     vector<TDBDefine_TickAB>::iterator next = curr;
