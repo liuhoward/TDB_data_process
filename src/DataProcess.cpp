@@ -340,7 +340,7 @@ int GetTickAB(THANDLE hTdb, const std::string& strCode, string nDate, int nStart
 
         // filter ticks with wrong date or wrong price or wrong time
         tdbTick.nTime = tdbTick.nTime / 1000 * 1000;
-        if(tdbTick.nDate != nStartDay || tdbTick.nPrice <= 0 || tdbTick.nTime < 93000000 || (113000000 < tdbTick.nTime && tdbTick.nTime < 130000000) || tdbTick.nTime > 150000000) {
+        if(tdbTick.chWindCode[0] == '\0' || tdbTick.nDate != nStartDay || tdbTick.nPrice <= 0 || tdbTick.nTime < 93000000 || (113000000 < tdbTick.nTime && tdbTick.nTime < 130000000) || tdbTick.nTime > 150000000) {
             continue;
         }
         origin_data.push_back(tdbTick);
@@ -354,14 +354,18 @@ int GetTickAB(THANDLE hTdb, const std::string& strCode, string nDate, int nStart
     sort(origin_data.begin(), origin_data.end(), a_less_b);
 
     vector<TDBDefine_TickAB>::iterator curr = origin_data.begin();
-    vector<TDBDefine_TickAB>::iterator next = origin_data.begin();
+    while (curr->chWindCode[0] == '\0' || curr->nDate != nStartDay || curr->nPrice <= 0 || curr->nTime < 93000000 || (113000000 < curr->nTime && curr->nTime < 130000000) || curr->nTime > 150000000) {
+        ++curr;
+    }
+
+    vector<TDBDefine_TickAB>::iterator next = curr;
 
     ptime currTime = ptime(today) + hours(curr->nTime / 10000000) + minutes((curr->nTime % 10000000) / 100000) + seconds(((curr->nTime % 10000000) % 100000) / 1000);
     ptime nextTime;
 
     // remove duplicates with the same HHMMSS
     while(next != origin_data.end() && next->nTime == curr->nTime) {
-        next++;
+        ++next;
     }
     
     // only one valid tick
@@ -380,7 +384,7 @@ int GetTickAB(THANDLE hTdb, const std::string& strCode, string nDate, int nStart
             curr = next;
             // remove duplicates with the same HHMMSS
             while (next != origin_data.end() && next->nTime == curr->nTime) {
-                next++;
+                ++next;
             }
 
             if (next->nTime > 113000000 || next == origin_data.end()) {
@@ -405,7 +409,7 @@ int GetTickAB(THANDLE hTdb, const std::string& strCode, string nDate, int nStart
     currTime = ptime(today) + hours(curr->nTime / 10000000) + minutes((curr->nTime % 10000000) / 100000) + seconds(((curr->nTime % 10000000) % 100000) / 1000);
     // remove duplicates with the same HHMMSS
     while (next != origin_data.end() && next->nTime == curr->nTime) {
-        next++;
+        ++next;
     }
 
     if (next == origin_data.end()) {
@@ -422,7 +426,7 @@ int GetTickAB(THANDLE hTdb, const std::string& strCode, string nDate, int nStart
             curr = next;
             // remove duplicates with the same HHMMSS
             while (next != origin_data.end() && next->nTime == curr->nTime) {
-                next++;
+                ++next;
             }
 
             if (next == origin_data.end()) {
