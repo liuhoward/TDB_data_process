@@ -325,6 +325,7 @@ int GetTickAB(THANDLE hTdb, const std::string& strCode, string nDate, int nStart
     LINFO << "\t" << strCode.c_str() << "\t" << nStartDay << "\treceive " << nCount << " records, error code: " << nRet;
 
     TDBDefine_TickAB emptyTickAB;
+    memset(&emptyTickAB, 0, sizeof(emptyTickAB));
     strncpy(emptyTickAB.chWindCode, strCode.c_str(), sizeof(emptyTickAB.chWindCode));
     emptyTickAB.nDate = nStartDay;
 
