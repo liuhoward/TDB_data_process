@@ -26,6 +26,11 @@
 #include <boost/date_time/posix_time/posix_time.hpp>
 //#include <boost/format.hpp>
 
+
+#include "easylogging++.h"
+
+_INITIALIZE_EASYLOGGINGPP
+
 #define ELEMENT_COUNT(arr) (sizeof(arr)/sizeof(arr[0]))
 
 using namespace std;
@@ -47,7 +52,6 @@ int GetTickAB(THANDLE hTdb, const std::string& strCode, string nDate, int nStart
 void GetK(THANDLE hTdb, const std::string& strCode, CYCTYPE nCycType,int nCycDef, REFILLFLAG nFlag,  int nAutoComplete, int nStartDay, int nEndDay, int nStartTime=0, int nEndTime = 0);
 
 vector<string> importStockCode(string srcFile);
-
 
 int main(int argc, char* argv[])
 {
@@ -194,6 +198,7 @@ int main(int argc, char* argv[])
     }
 
     cout <<"------------finished-----------------"<<endl;
+    LINFO << "------------finished-----------------";
 
     TDB_Close(hTdb);
 
@@ -316,16 +321,15 @@ int GetTickAB(THANDLE hTdb, const std::string& strCode, string nDate, int nStart
         nRet = TDB_GetTickAB(hTdb, &reqTick, &pTick, &nCount);
     }
 
-    if(nRet != 0) {
-        return -1;
-    }
-
-    Print("-- %s ---%d---receive %d records, error code:%d ------\n", strCode.c_str(), nStartDay, nCount, nRet);
+    //Print("-- %s ---%d---receive %d records, error code:%d ------\n", strCode.c_str(), nStartDay, nCount, nRet);
+    LINFO << "\t" << strCode.c_str() << "\t" << nStartDay << "\treceive " << nCount << " records, error code: " << nRet;
 
     TDBDefine_TickAB emptyTickAB;
     strncpy(emptyTickAB.chWindCode, strCode.c_str(), sizeof(emptyTickAB.chWindCode));
     emptyTickAB.nDate = nStartDay;
-    if(nCount <= 0) {
+
+    if(nRet != 0 || nCount <= 0) {
+        LERROR << "\t" << strCode.c_str() << "\t" << nStartDay << "\tfailed, error code: " << nRet;
         formatTickAB(emptyTickAB, ofile);
         return 0;
     }
@@ -351,6 +355,7 @@ int GetTickAB(THANDLE hTdb, const std::string& strCode, string nDate, int nStart
     }
 
     if(origin_data.size() == 0) {
+        LERROR << "\t" << strCode.c_str() << "\t" << nStartDay << "\tno valid ticks";
         formatTickAB(emptyTickAB, ofile);
         return 0;
     }
@@ -363,6 +368,7 @@ int GetTickAB(THANDLE hTdb, const std::string& strCode, string nDate, int nStart
         ++curr;
     }
     if(curr == origin_data.end()) {
+        LERROR << "\t" << strCode.c_str() << "\t" << nStartDay << "\tno valid ticks";
         formatTickAB(emptyTickAB, ofile);
         return 0;
     }
